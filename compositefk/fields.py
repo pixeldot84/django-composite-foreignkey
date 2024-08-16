@@ -36,9 +36,6 @@ class CompositeForeignKey(ForeignObject):
 
         # a list of tuple : (fieldnaem, value) . if fielname = value, then the field react as if fieldnaem_id = None
         self._raw_fields = self.compute_to_fields(to_fields)
-        # hiro nakamura should have said «very bad guy. you are vilain»
-        if "on_delete" in kwargs:
-            kwargs["on_delete"] = self.override_on_delete(kwargs["on_delete"])
 
         kwargs["to_fields"], kwargs["from_fields"] = zip(
             *(
@@ -48,23 +45,6 @@ class CompositeForeignKey(ForeignObject):
             )
         )
         super(CompositeForeignKey, self).__init__(to, **kwargs)
-
-    def override_on_delete(self, original):
-
-        @wraps(original)
-        def wrapper(collector, field, sub_objs, using):
-            res = original(collector, field, sub_objs, using)
-            # we make something nasty : we update the collector to
-            # skip the local field which does not have a dbcolumn
-            try:
-                del collector.field_updates[self.model][(self, None)]
-            except KeyError:
-                pass
-            return res
-
-        wrapper._original_fn = original
-
-        return wrapper
 
     def check(self, **kwargs):
         errors = super(CompositeForeignKey, self).check(**kwargs)
